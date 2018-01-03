@@ -1,0 +1,222 @@
+from __future__ import print_function
+
+import torch
+import torch.nn as nn
+import torch.legacy.nn as nn2
+from torch.autograd import Variable
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        m.weight.data.normal_(0.0, 0.02)
+        m.bias.data.fill_(0)
+    elif classname.find('BatchNorm') != -1:
+        m.weight.data.normal_(1.0, 0.02)
+        m.bias.data.fill_(0)
+
+# For input size input_nc x 256 x 256
+class G ( nn.Module,nn2.Module):
+    def __init__(self, input_nc, output_nc, ngf):
+        super(G, self).__init__()
+        self.conv1 = nn2.SpatialDilatedConvolution(input_nc, ngf, 3, 3,        1 , 1, 		1 , 1,		 1, 1)
+        self.conv1=self.conv1.cuda()
+        self.conv2 = nn2.SpatialDilatedConvolution(ngf, ngf*2, 3, 3,        1 , 1,		 2 , 2       , 2, 2)
+        self.conv2=self.conv2.cuda()
+
+        self.conv3 = nn2.SpatialDilatedConvolution(ngf*2, ngf*4, 3, 3,        1 , 1, 		4 , 4		, 4, 4)
+        self.conv3=self.conv3.cuda()
+
+        self.conv5 = nn2.SpatialDilatedConvolution(ngf*4, ngf*4, 3, 3,        1 , 1, 		8 , 8		, 8, 8)
+        self.conv5=self.conv5.cuda()
+
+        self.conv6 = nn2.SpatialDilatedConvolution(ngf*4, ngf*4, 3, 3,        1 , 1,		 16 , 16		, 16, 16)
+        self.conv6=self.conv6.cuda()
+
+        self.conv7 = nn2.SpatialDilatedConvolution(ngf*4, ngf*4, 3, 3,        1 , 1,		 32 , 32		, 32 , 32)
+        self.conv7=self.conv7.cuda()
+
+        self.conv8 = nn2.SpatialDilatedConvolution(ngf*4, ngf*4, 3, 3,        1 , 1,		 64 , 64,		 64 , 64)
+        self.conv8=self.conv8.cuda()
+
+
+
+        self.conv4 = nn2.SpatialDilatedConvolution(ngf*4, 3, 1, 1,        1 , 1, 		0 , 0,		 1, 1)
+        self.conv4=self.conv4.cuda()
+
+        
+        self.batch_norm = nn.BatchNorm2d(ngf)
+        self.batch_norm = self.batch_norm.cuda()
+
+        self.batch_norm2 = nn.BatchNorm2d(ngf * 2)
+        self.batch_norm2 = self.batch_norm2.cuda()
+        self.batch_norm4 = nn.BatchNorm2d(ngf * 4)
+        self.batch_norm4 = self.batch_norm4.cuda()
+        self.batch_norm8 = nn.BatchNorm2d(ngf * 8)
+        self.batch_norm8 = self.batch_norm8.cuda()
+
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
+        self.leaky_relu = self.leaky_relu.cuda()
+        self.relu = nn.ReLU(True)
+        self.relu=self.relu.cuda()
+
+        self.dropout = nn.Dropout(0.5)
+
+        self.tanh = nn.Tanh()
+        self.tanh=self.tanh.cuda()
+
+    def forward(self, input):
+        # Encoder
+        # Convolution layers:
+        # input is (nc) x 256 x 256
+        '''
+        e1 = self.conv1.updateOutput(input.data.cpu())
+        e1=Variable(e1.cuda())
+        #print (e1.size())
+
+        v1=   self.leaky_relu(e1)
+        a1=self.conv2.updateOutput(  v1.data.cpu())
+        # state size is (ngf) x 128 x 128
+        e2 = self.batch_norm2(   Variable(a1.cuda()) )
+
+        #e2=Variable(e2.cuda())
+        #print (e2.size())
+
+        
+        v1=   self.leaky_relu(e2)
+        a1=self.conv3.updateOutput(  v1.data.cpu())
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1.cuda()) )
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+        a1=self.conv4.updateOutput(  v1.data.cpu())
+        # state size is (ngf) x 128 x 128
+        e4 =  Variable(a1.cuda()) 
+        #print (e3.size())
+
+        
+        
+
+        # state size is (ngf x 2) x 64 x 64
+        # state size is (ngf x 4) x 32 x 32
+        #print (e8)
+
+        output = self.tanh(e4)
+        #print (output.size())
+        return output
+        '''
+        e1 = self.conv1.updateOutput(input.data)
+        e1=Variable(e1)
+        #print (('e1',e1.size()))
+
+        v1=   self.leaky_relu(e1)
+        a1=self.conv2.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e2 = self.batch_norm2(   Variable(a1  ) )
+        #print (('e2',e2.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e2.size())
+
+        
+        v1=   self.leaky_relu(e2)
+        a1=self.conv3.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1) )
+        #print (('e3',e3.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+
+
+        a1=self.conv5.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1) )
+        #print (('e3',e3.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+
+
+        a1=self.conv6.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1) )
+        #print (('e3',e3.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+
+
+        a1=self.conv7.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1) )
+        #print (('e3',e3.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+
+
+        a1=self.conv8.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e3 = self.batch_norm4(   Variable(a1) )
+        #print (('e3',e3.size()))
+
+        #e2=Variable(e2.cuda())
+        #print (e3.size())
+        v1=   self.leaky_relu(e3)
+
+
+        a1=self.conv4.updateOutput(  v1.data)
+        # state size is (ngf) x 128 x 128
+        e4 =  Variable(a1) 
+        #print (e4.size())
+
+        
+        
+
+        # state size is (ngf x 2) x 64 x 64
+        # state size is (ngf x 4) x 32 x 32
+        #print (e8)
+
+        output = self.tanh(e4)
+        #print (output.size())
+        return output
+        
+
+class D(nn.Module):
+    def __init__(self, input_nc, output_nc, ndf):
+        super(D, self).__init__()
+        self.conv1 = nn.Conv2d(input_nc + output_nc, ndf, 4, 2, 1)
+        self.conv2 = nn.Conv2d(ndf, ndf * 2, 4, 2, 1)
+        self.conv3 = nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1)
+        self.conv4 = nn.Conv2d(ndf * 4, ndf * 8, 4, 1, 1)
+        self.conv5 = nn.Conv2d(ndf * 8, 1, 4, 1, 1)
+
+        self.batch_norm2 = nn.BatchNorm2d(ndf * 2)
+        self.batch_norm4 = nn.BatchNorm2d(ndf * 4)
+        self.batch_norm8 = nn.BatchNorm2d(ndf * 8)
+
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input):
+        # input is (nc x 2) x 256 x 256
+        h1 = self.conv1(input)
+        # state size is (ndf) x 128 x 128
+        h2 = self.batch_norm2(self.conv2(self.leaky_relu(h1)))
+        # state size is (ndf x 2) x 64 x 64
+        h3 = self.batch_norm4(self.conv3(self.leaky_relu(h2)))
+        # state size is (ndf x 4) x 32 x 32
+        h4 = self.batch_norm8(self.conv4(self.leaky_relu(h3)))
+        # state size is (ndf x 8) x 31 x 31
+        h5 = self.conv5(self.leaky_relu(h4))
+        # state size is (ndf) x 30 x 30, corresponds to 70 x 70 receptive
+        output = self.sigmoid(h5)
+        return output
